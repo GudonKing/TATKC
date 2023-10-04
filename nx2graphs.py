@@ -26,7 +26,6 @@ def load_real_data(dataName):
     maxTime_list = max(g_df.ts.values)
     adj_list = [[] for _ in range(max_idx + 1)]
     for src, dst, eidx, ts in zip(src_list, dst_list, g_df.idx.values, ts_list):
-        # adj_list[src].append((dst, eidx, ts))
         adj_list[dst].append((src, eidx, ts))
     ngh_finder = NeighborFinder(adj_list, uniform=False)
     return src_list, dst_list, ts_list, node_count, node_list, maxTime_list, ngh_finder
