@@ -1,17 +1,9 @@
 import functools
-import math
-import time
 
 import numpy as np
 import torch
 import multiprocessing
 import numba
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-import multiprocessing as mp
-from functools import lru_cache
-import bisect
-from cachetools import cached, LRUCache
 
 from numba import njit, jit
 
@@ -125,26 +117,33 @@ class NeighborFinder:
             ngh_idx, ngh_ts = self.find_before(src_idx, cut_time)
 
             if len(ngh_idx) > 0:
-                # if self.uniform:
-                sampled_idx = np.random.randint(0, len(ngh_idx), num_neighbors)  # 随机取样
+                # 1.uniform sampling:
+                # sampled_idx = np.random.randint(0, len(ngh_idx), num_neighbors)  # 随机取样
+                #
+                # out_ngh_node_batch[i, :] = ngh_idx[sampled_idx]
+                # out_ngh_t_batch[i, :] = ngh_ts[sampled_idx]
+                #
+                # # resort based on time
+                # pos = out_ngh_t_batch[i, :].argsort()
+                # out_ngh_node_batch[i, :] = out_ngh_node_batch[i, :][pos]
+                # out_ngh_t_batch[i, :] = out_ngh_t_batch[i, :][pos]
 
-                out_ngh_node_batch[i, :] = ngh_idx[sampled_idx]
-                out_ngh_t_batch[i, :] = ngh_ts[sampled_idx]
-
-                # resort based on time
-                pos = out_ngh_t_batch[i, :].argsort()
-                out_ngh_node_batch[i, :] = out_ngh_node_batch[i, :][pos]
-                out_ngh_t_batch[i, :] = out_ngh_t_batch[i, :][pos]
-
-                # # 按时间最近取样
+                # 2.Recent interaction sampling:
                 # ngh_idx = ngh_idx[-num_neighbors:]
                 # ngh_ts = ngh_ts[-num_neighbors:]
 
-                # 按时间顺序取样
+                # 3.Farthest interaction sampling:
                 # ngh_idx = ngh_idx[:num_neighbors]
                 # ngh_ts = ngh_ts[:num_neighbors]
 
-                # 计算邻居节点度数
+                # Expanded neighbor sampling:
+                # if len(ngh_idx) > num_neighbors:
+                #     ngh_idx, ngh_ts = self.evenly_sample_increasing_sequence(ngh_idx, ngh_ts, num_neighbors)
+                # else:
+                #     ngh_idx = ngh_idx[:num_neighbors]
+                #     ngh_ts = ngh_ts[:num_neighbors]
+
+                # Degree-based sampling:
                 if len(ngh_idx) > num_neighbors:
                     # degree_batch = np.diff(self.off_set_l[ngh_idx])
                     degree_batch = self.off_set_l[ngh_idx + 1] - self.off_set_l[ngh_idx]
@@ -153,13 +152,6 @@ class NeighborFinder:
                     neighbors = np.argsort(degree_batch)[-num_neighbors:]
                     ngh_idx = ngh_idx[neighbors]
                     ngh_ts = ngh_ts[neighbors]
-
-                # 均匀取样
-                # if len(ngh_idx) > num_neighbors:
-                #     ngh_idx, ngh_ts = self.evenly_sample_increasing_sequence(ngh_idx, ngh_ts, num_neighbors)
-                # else:
-                #     ngh_idx = ngh_idx[:num_neighbors]
-                #     ngh_ts = ngh_ts[:num_neighbors]
 
                 assert (len(ngh_idx) <= num_neighbors)
                 assert (len(ngh_ts) <= num_neighbors)
@@ -184,4 +176,3 @@ class NeighborFinder:
             ngh_idx.append(idx_list[index])
             ngh_ts.append(ts_list[index])
         return ngh_idx, ngh_ts
-

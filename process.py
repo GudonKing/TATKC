@@ -16,7 +16,7 @@ def preprocess(data_name):
         # s = next(f)
         # print(s)
         for idx, line in enumerate(f):
-            e = line.strip().split(',')
+            e = line.strip().split('\t')
             # values = [v.split(' ') for v in e]
             u = int(e[0])
             i = int(e[1])
@@ -50,11 +50,11 @@ def run(data_name):
     df.to_csv(OUT_DF)
     np.save(OUT_NODE_FEAT, rand_feat)
 
-run('edit-tgwiktionary')
-run('edit-mgwikipedia')
-run('edit-ltwiktionary')
-run('edit-mlwikiquote')
-run('edit-plwikiquote')
-run('edit-warwikipedia')
-run('edit-zhwiktionary')
-run('edit-mgwiktioanry')
+# run('edit-tgwiktionary')
+# run('edit-mgwikipedia')
+# run('edit-ltwiktionary')
+# run('edit-mlwikiquote')
+# run('edit-plwikiquote')
+# run('edit-warwikipedia')
+# run('edit-zhwiktionary')
+# run('edit-mgwiktioanry')

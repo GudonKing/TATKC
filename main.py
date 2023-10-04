@@ -47,7 +47,7 @@ class MLP(torch.nn.Module):
 
 # Argument and global variables
 parser = argparse.ArgumentParser('Interface for TATKC experiments')
-parser.add_argument('-d', '--data', type=str, help='data sources to use, try wikipedia or reddit', default='wikipedia')
+parser.add_argument('-d', '--data', type=str, help='data sources to use', default='edit-tgwiktioanry')
 parser.add_argument('--bs', type=int, default=1500, help='batch_size')
 parser.add_argument('--prefix', type=str, default='hello_world', help='prefix to name the checkpoints')
 parser.add_argument('--n_degree', type=int, default=20, help='number of neighbors to sample')
@@ -57,15 +57,12 @@ parser.add_argument('--n_layer', type=int, default=2, help='number of network la
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
 parser.add_argument('--drop_out', type=float, default=0.1, help='dropout probability')
 parser.add_argument('--gpu', type=int, default=3, help='idx for the gpu to use')
-parser.add_argument('--node_dim', type=int, default=128, help='Dimentions of the node embedding')
-parser.add_argument('--time_dim', type=int, default=128, help='Dimentions of the time embedding')
 parser.add_argument('--agg_method', type=str, choices=['attn', 'lstm', 'mean'], help='local aggregation method',
                     default='attn')
 parser.add_argument('--attn_mode', type=str, choices=['prod', 'map'], default='prod',
                     help='use dot product attention or mapping based')
 parser.add_argument('--time', type=str, choices=['time', 'pos', 'empty'], help='how to use time information',
                     default='time')
-parser.add_argument('--top_k', type=int, default=0.01, help='number of Top-N% nodes')
 parser.add_argument('--uniform', action='store_true', help='take uniform sampling from temporal neighbors')
 parser.add_argument("--local_rank", type=int)
 
@@ -90,9 +87,6 @@ SEQ_LEN = NUM_NEIGHBORS
 DATA = args.data
 NUM_LAYER = args.n_layer
 LEARNING_RATE = args.lr
-NODE_DIM = args.node_dim
-TIME_DIM = args.time_dim
-TOP_K = args.top_k
 
 MODEL_SAVE_PATH = f'./saved_models/{args.prefix}-{args.agg_method}-{args.attn_mode}-{args.data}.pth'
 LR_MODEL_SAVE_PATH = f'./saved_models/{args.agg_method}-{args.attn_mode}-{args.data}_mlp.pth'
@@ -115,30 +109,11 @@ logger.addHandler(ch)
 logger.info(args)
 
 
-# def loss_cal(y_out, true_val, num_nodes, device):
-#     _, order_y_true = torch.sort(-true_val[:num_nodes])
-#
-#     sample_num = num_nodes * 20
-#
-#     ind_1 = torch.randint(0, num_nodes, (sample_num,)).long().to(device)
-#     ind_2 = torch.randint(0, num_nodes, (sample_num,)).long().to(device)
-#
-#     rank_measure = torch.sign(-1 * (ind_1 - ind_2)).float()
-#
-#     input_arr1 = y_out[:num_nodes][order_y_true[ind_1]].to(device)
-#     input_arr2 = y_out[:num_nodes][order_y_true[ind_2]].to(device)
-#
-#     loss_rank = torch.nn.MarginRankingLoss(margin=1).forward(input_arr1, input_arr2, rank_measure)
-#
-#     return loss_rank
-
-
 def eval_real_data(hint, tgan, lr_model, sampler, src, ts, label):
     val_acc, val_kts = [], []
     test_pred_tbc_list = []
     tgan.ngh_finder = sampler
 
-    result_save_path = '/code/fangjunkai/GNN-Bet-master/result_save/{}_tkc.pickle'.format(args.data)
     with torch.no_grad():
         lr_model = lr_model.eval()
         tgan = tgan.eval()
@@ -158,7 +133,7 @@ def eval_real_data(hint, tgan, lr_model, sampler, src, ts, label):
         numslist = [0.01, 0.05, 0.1, 0.2]
         acc_list = []
         for k in numslist:
-            nums = int(k * len(src))  # 采样数量
+            nums = int(k * len(src))
             test_pred_tbc_topk = np.argsort(test_pred_tbc_list)[-nums:]
             test_true_data_label_topk = np.argsort(label)[-nums:]
             test_hit = list(set(test_pred_tbc_topk).intersection(set(test_true_data_label_topk)))
@@ -166,13 +141,10 @@ def eval_real_data(hint, tgan, lr_model, sampler, src, ts, label):
             acc_list.append(val_acc_topk)
         val_kts.append(kt)
 
-    with open(result_save_path, "wb") as fopen:
-        pickle.dump(test_pred_tbc_list, fopen)
-
     return acc_list, np.mean(val_kts)
 
 
-# Load data and train val test split
+# Load data
 n_feat = np.load('./data/test/Real/processed/ml_{}_node.npy'.format(DATA), allow_pickle=True)
 test_real_feat = np.load('./data/test/Real/processed/ml_{}_node.npy'.format(DATA), allow_pickle=True)
 
@@ -184,9 +156,6 @@ def setSeeds(seed):
 
 
 setSeeds(89)
-
-# torch.backends.cudnn.enabled = True
-# torch.backends.cudnn.benchmark = True
 
 
 train_real_src_l, train_real_dst_l, train_real_ts_l, train_real_node_count, train_real_node, train_real_time, \
@@ -205,24 +174,23 @@ for idx in range(len(nodeList_train_real)):
 
 test_real_ts_list = np.array([test_real_time] * len(nodeList_test_real))
 
-# TEST_BATCH_SIZE = BATCH_SIZE
-# num_test_instance = len(nodeList_test_real)
-# num_test_batch = math.ceil(num_test_instance / TEST_BATCH_SIZE)
-# for k in range(num_test_batch):
-#     s_idx = k * TEST_BATCH_SIZE
-#     e_idx = min(num_test_instance, s_idx + TEST_BATCH_SIZE)
-#     test_src_l_cut = np.array(nodeList_test_real[s_idx:e_idx])
-#     test_ts_l_cut = np.array(test_real_ts_list[s_idx:e_idx])
-#     test_real_ngh_finder.preprocess(tuple(test_src_l_cut), tuple(test_ts_l_cut), NUM_LAYER, NUM_NEIGHBORS)
+TEST_BATCH_SIZE = BATCH_SIZE
+num_test_instance = len(nodeList_test_real)
+num_test_batch = math.ceil(num_test_instance / TEST_BATCH_SIZE)
+for k in range(num_test_batch):
+    s_idx = k * TEST_BATCH_SIZE
+    e_idx = min(num_test_instance, s_idx + TEST_BATCH_SIZE)
+    test_src_l_cut = np.array(nodeList_test_real[s_idx:e_idx])
+    test_ts_l_cut = np.array(test_real_ts_list[s_idx:e_idx])
+    test_real_ngh_finder.preprocess(tuple(test_src_l_cut), tuple(test_ts_l_cut), NUM_LAYER, NUM_NEIGHBORS)
 
 # Model initialize
 device = torch.device('cuda:{}'.format(GPU))
 
 MLP_model = MLP(n_feat.shape[1], drop=DROP_OUT)
 MLP_model = MLP_model.to(device)
-tatkc = TATKC(train_real_ngh_finder[0], test_real_feat,
-            num_layers=NUM_LAYER, use_time=USE_TIME, agg_method=AGG_METHOD, attn_mode=ATTN_MODE,
-            seq_len=SEQ_LEN, n_head=NUM_HEADS, drop_out=DROP_OUT, node_dim=NODE_DIM, time_dim=TIME_DIM)
+tatkc = TATKC(train_real_ngh_finder[0], test_real_feat, num_layers=NUM_LAYER, use_time=USE_TIME,
+              agg_method=AGG_METHOD, attn_mode=ATTN_MODE, seq_len=SEQ_LEN, n_head=NUM_HEADS, drop_out=DROP_OUT)
 tatkc = tatkc.to(device)
 
 optimizer = torch.optim.Adam(list(tatkc.parameters()) + list(MLP_model.parameters()), LEARNING_RATE)
@@ -240,7 +208,7 @@ for epoch in range(NUM_EPOCH):
 
     for j in tqdm(range(len(train_real_ts_l))):
         tatkc.ngh_finder = train_real_ngh_finder[j]
-        acc, m_loss, kts, pred_tbc = [], [], [], []
+        m_loss = []
 
         TRAIN_BATCH_SIZE = BATCH_SIZE
         num_train_instance = len(nodeList_train_real[j])
@@ -256,7 +224,6 @@ for epoch in range(NUM_EPOCH):
             src_embed = tatkc.tem_conv(src_l_cut, ts_l_cut, NUM_LAYER, num_neighbors=NUM_NEIGHBORS)
             true_label = torch.from_numpy(np.array(label_l_cut)).float().to(device)
             pred_bc = MLP_model(src_embed)
-            pred_tbc.extend(pred_bc.cpu().detach().numpy().tolist())
 
             loss = loss_cal(pred_bc, true_label, len(pred_bc), device)  # ranking loss
             m_loss.append(loss.item())
@@ -265,24 +232,10 @@ for epoch in range(NUM_EPOCH):
             optimizer.step()
             scheduler.step()
 
-        train_label_list = np.array(train_label_l_real[j]).tolist()
-        with torch.no_grad():
-            kt, _ = kendalltau(pred_tbc, train_label_list)
-            nums = int(TOP_K * len(nodeList_train_real[j]))
-            pred_bc_topk = np.argsort(pred_tbc)[-nums:]
-            true_label_topk = np.argsort(train_label_list)[-nums:]
-
-            hit = list(set(pred_bc_topk).intersection(set(true_label_topk)))
-            acc.append(min((len(hit) / nums), 1.00))  # 准确度
-            kts.append(kt)
-            train_kts.append(kts)
             train_loss.append(np.mean(m_loss))
-            train_acc.append(acc)
 
     logger.info('epoch: {}:'.format(epoch))
     logger.info('Epoch mean loss: {}'.format(np.mean(train_loss)))
-    logger.info('train acc: {}'.format(np.mean(train_acc)))
-    logger.info('train kt: {}'.format(np.mean(train_kts)))
 
 train_end = time.time()
 print('train end, train_time={}'.format(train_end - start_train))
