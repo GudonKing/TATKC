@@ -220,7 +220,7 @@ for epoch in range(NUM_EPOCH):
             label_l_cut = train_label_l_real[j][s_idx:e_idx]
             ts_l_cut = train_real_ts_list[j][s_idx:e_idx]
             optimizer.zero_grad()
-            scheduler = MultiStepLR(optimizer, milestones=[10, 25], gamma=0.01)
+            scheduler = MultiStepLR(optimizer, milestones=[10], gamma=0.01)
             src_embed = tatkc.tem_conv(src_l_cut, ts_l_cut, NUM_LAYER, num_neighbors=NUM_NEIGHBORS)
             true_label = torch.from_numpy(np.array(label_l_cut)).float().to(device)
             pred_bc = MLP_model(src_embed)
