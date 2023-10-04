@@ -4,46 +4,14 @@ import pandas as pd
 
 import numpy as np
 import networkx as nx
-import os
 import pickle
 
 import torch
-from scipy.stats import kendalltau
 from torch import nn
-
-import TBC_calculator
 from tqdm import tqdm
 
 from graph import NeighborFinder
-from process import run
-from torch.nn import functional as F
 
-
-def load_true_TKC(data_type):
-    nodeList, true_tkc = [], []
-    if data_type == 'train':
-        for i in range(400):
-            g_df = pd.read_csv('./data/train/Synthetic/scores/graph_{}_scores.csv'.format(i),
-                               names=['node_id', 'score'], sep=' ')
-            train_nodeList = g_df['node_id'].tolist()
-            train_nodeList = [int(i) for i in train_nodeList]
-
-            train_tkcList = g_df['score'].tolist()
-            # train_tkcList = [float(i) for i in train_tkcList]
-            nodeList.append(train_nodeList)
-            true_tkc.append(np.array(train_tkcList))
-    else:
-        for i in range(60):
-            g_df = pd.read_csv('./data/test/Synthetic/scores/graph_{}_scores.csv'.format(i), names=['node_id', 'score'],
-                               sep=' ')
-            test_nodeList = g_df['node_id'].tolist()
-            test_nodeList = [int(i) for i in test_nodeList]
-
-            test_tkcList = g_df['score'].tolist()
-            # test_tkcList = [float(i) for i in test_tkcList]
-            nodeList.append(test_nodeList)
-            true_tkc.append(np.array(test_tkcList))
-    return nodeList, true_tkc
 
 
 def load_real_data(dataName):
