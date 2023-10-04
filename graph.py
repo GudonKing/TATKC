@@ -118,7 +118,7 @@ class NeighborFinder:
 
             if len(ngh_idx) > 0:
                 # 1.uniform sampling:
-                # sampled_idx = np.random.randint(0, len(ngh_idx), num_neighbors)  # 随机取样
+                # sampled_idx = np.random.randint(0, len(ngh_idx), num_neighbors)
                 #
                 # out_ngh_node_batch[i, :] = ngh_idx[sampled_idx]
                 # out_ngh_t_batch[i, :] = ngh_ts[sampled_idx]
