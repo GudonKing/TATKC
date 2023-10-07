@@ -7,7 +7,7 @@ Code is written in Python and the proposed model is implemented using Pytorch.
 Running the code:
 
 ```python
-python -u main.py -dedit-tgwiktionary --lr 0.01
+python -u main.py -d edit-tgwiktionary --lr 0.01
 ```
 
 The test datasets are available on http://www.konect.cc/networks/
