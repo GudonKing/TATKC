@@ -146,7 +146,8 @@ def eval_real_data(hint, tgan, lr_model, sampler, src, ts, label):
 
 # Load data
 n_feat = np.load('./data/test/Real/processed/ml_{}_node.npy'.format(DATA), allow_pickle=True)
-test_real_feat = np.load('./data/test/Real/processed/ml_{}_node.npy'.format(DATA), allow_pickle=True)
+# test_real_feat = np.load('./data/test/Real/processed/ml_{}_node.npy'.format(DATA), allow_pickle=True)
+test_real_feat = np.zeros((4200000, 128))
 
 
 def setSeeds(seed):
@@ -195,6 +196,8 @@ tatkc = tatkc.to(device)
 
 optimizer = torch.optim.Adam(list(tatkc.parameters()) + list(MLP_model.parameters()), LEARNING_RATE)
 
+tatkc.load_state_dict(torch.load('./saved_models/model_tatkc.pth'))
+MLP_model.load_state_dict(torch.load('./saved_models/model_MLP.pth'))
 
 print('train start')
 start_train = time.time()
@@ -248,4 +251,7 @@ real_data_end_time = time.time()
 logger.info('Test real data statistics: nodes -- Top_1%: {}, Top_5%: {}, Top_10%: {}, Top_20%: {},kt:{}, time:{}'
             .format(test_real_acc[0], test_real_acc[1], test_real_acc[2], test_real_acc[3], test_real_kts,
                     real_data_end_time - real_data_start_time))
-
+# torch.save(MLP_model.state_dict(), './saved_models/model_MLP.pth')
+# print("MLP_model save over")
+# torch.save(tatkc.state_dict(), './saved_models/model_tatkc.pth')
+# print("tatkc_model save over")
